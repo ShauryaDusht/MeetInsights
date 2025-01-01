@@ -6,12 +6,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 import pytz
 import time
-
+from audio_recorder import AudioRecorder
+from transcription_scraper import TranscriptionScraper
 class MeetController:
     def __init__(self):
         self.opt = self._setup_chrome_options()
         self.driver = None
-    
+        self.audio_recorder = AudioRecorder()
+        self.transcription_scraper = None
+     
     def _setup_chrome_options(self):
         """Set up Chrome options for the webdriver"""
         opt = Options()
@@ -22,10 +25,15 @@ class MeetController:
         opt.add_experimental_option(
             "prefs",
             {
+                # turn off microphone by default
                 "profile.default_content_setting_values.media_stream_mic": 1,
+                # turn off camera by default
                 "profile.default_content_setting_values.media_stream_camera": 1,
                 "profile.default_content_setting_values.geolocation": 0,
                 "profile.default_content_setting_values.notifications": 1,
+                # enable captions
+                "accessibility.captions.enabled": True,
+                "accessibility.captions.on": 1
             },
         )
         return opt
@@ -127,13 +135,7 @@ class MeetController:
 
     def join_meet(self, meeting_link, join_time_ist, exit_time_ist, timezone="Asia/Kolkata"):
         """
-        Join a Google Meet session at specified time
-        
-        Args:
-            meeting_link (str): Google Meet URL
-            join_time_ist (datetime): Meeting join time
-            exit_time_ist (datetime): Meeting exit time
-            timezone (str, optional): Timezone name. Defaults to "Asia/Kolkata"
+        Join a Google Meet session at specified time and record audio
         """
         tz = pytz.timezone(timezone)
         join_time_utc = tz.localize(join_time_ist).astimezone(pytz.utc)
@@ -152,13 +154,28 @@ class MeetController:
         self._join_meeting_room()
         print("Meeting started.")
         
-        wait_time = (exit_time_utc - datetime.now(pytz.utc)).total_seconds()
-        if wait_time > 0:
-            print(f"Meeting will end in {wait_time:.2f} seconds...")
-            time.sleep(wait_time)
-        
-        self.driver.quit()
-        print("Meeting ended. Chrome tab closed.")
+        try:
+            time.sleep(10)
+            
+            # start transcription scrapping
+            ts = self.transcription_scraper = TranscriptionScraper(self.driver)
+            ts.start_transcription()
+            
+            wait_time = (exit_time_utc - datetime.now(pytz.utc)).total_seconds()
+            
+            while wait_time > 0:
+                print(f"Time left for the meet: {wait_time:.2f} seconds")
+                time.sleep(10)
+                wait_time = (exit_time_utc - datetime.now(pytz.utc)).total_seconds()
+                if wait_time < 0:
+                    print("Wait time over. Exiting the meeting...")
+                    break
+
+        except Exception as e:
+            print(f"Error during transcription: {str(e)}")
+        finally:
+            self.driver.quit()
+            print("Meeting ended. Chrome tab closed....")
 
 def get_meet_controller():
     '''
