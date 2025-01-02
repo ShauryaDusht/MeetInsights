@@ -7,7 +7,7 @@ load_dotenv()
 
 curr_time = datetime.now()
 join_time_ist = curr_time + timedelta(seconds=60) # 60 seconds from now
-exit_time_ist = curr_time + timedelta(seconds=300) # 300 seconds from now
+exit_time_ist = curr_time + timedelta(seconds=150) # 150 seconds from now
 print(f"Joining the meeting at {join_time_ist.time()} and exiting at {exit_time_ist.time()}.")
 
 # Get environment variables

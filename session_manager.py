@@ -6,13 +6,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 import pytz
 import time
-from audio_recorder import AudioRecorder
+# from audio_recorder import AudioRecorder
 from transcription_scraper import TranscriptionScraper
 class MeetController:
     def __init__(self):
         self.opt = self._setup_chrome_options()
         self.driver = None
-        self.audio_recorder = AudioRecorder()
+        # self.audio_recorder = AudioRecorder()
         self.transcription_scraper = None
      
     def _setup_chrome_options(self):
@@ -155,27 +155,43 @@ class MeetController:
         print("Meeting started.")
         
         try:
-            time.sleep(10)
+            time.sleep(10)  # Wait for meeting to fully load
             
-            # start transcription scrapping
-            ts = self.transcription_scraper = TranscriptionScraper(self.driver)
-            ts.start_transcription()
+            # Initialize and start transcription scraping
+            self.transcription_scraper = TranscriptionScraper(self.driver)
+            self.transcription_scraper.start_transcription()
             
-            wait_time = (exit_time_utc - datetime.now(pytz.utc)).total_seconds()
-            
-            while wait_time > 0:
-                print(f"Time left for the meet: {wait_time:.2f} seconds")
-                time.sleep(10)
-                wait_time = (exit_time_utc - datetime.now(pytz.utc)).total_seconds()
-                if wait_time < 0:
-                    print("Wait time over. Exiting the meeting...")
+            # Continuous monitoring loop
+            while True:
+                current_time = datetime.now(pytz.utc)
+                wait_time = (exit_time_utc - current_time).total_seconds()
+                
+                if wait_time <= 0:
+                    print("Meeting time is up. Preparing to exit...")
                     break
+                
+                # Print remaining time every minute
+                if int(wait_time) % 60 == 0:
+                    print(f"Time remaining in meeting: {int(wait_time/60)} minutes")
+                
+                # Brief sleep to prevent CPU overuse
+                time.sleep(1)
+                
+                # Check if transcription is still running
+                if not self.transcription_scraper.is_running:
+                    print("Transcription stopped unexpectedly. Attempting to restart...")
+                    self.transcription_scraper.start_transcription()
 
         except Exception as e:
-            print(f"Error during transcription: {str(e)}")
+            print(f"Error during meeting: {str(e)}")
         finally:
+            if self.transcription_scraper:
+                print("Stopping transcription...")
+                self.transcription_scraper.stop_transcription()
+            print("Closing browser...")
             self.driver.quit()
-            print("Meeting ended. Chrome tab closed....")
+            print("Meeting ended. Chrome tab closed.")
+        return
 
 def get_meet_controller():
     '''
