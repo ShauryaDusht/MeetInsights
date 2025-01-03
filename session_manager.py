@@ -8,6 +8,27 @@ import pytz
 import time
 # from audio_recorder import AudioRecorder
 from transcription_scraper import TranscriptionScraper
+
+'''
+  $$$$$$\  $$$$$$$$\  $$$$$$\   $$$$$$\  $$$$$$\  $$$$$$\  $$\   $$\ 
+  $$  __$$\ $$  _____|$$  __$$\ $$  __$$\ \_$$  _|$$  __$$\ $$$\  $$ |
+  $$ /  \__|$$ |      $$ /  \__|$$ /  \__|  $$ |  $$ /  $$ |$$$$\ $$ |
+  \$$$$$$\  $$$$$\    \$$$$$$\  \$$$$$$\    $$ |  $$ |  $$ |$$ $$\$$ |
+  \____$$\ $$  __|    \____$$\  \____$$\   $$ |  $$ |  $$ |$$ \$$$$ |
+  $$\   $$ |$$ |      $$\   $$ |$$\   $$ |  $$ |  $$ |  $$ |$$ |\$$$ |
+  \$$$$$$  |$$$$$$$$\ \$$$$$$  |\$$$$$$  |$$$$$$\  $$$$$$  |$$ | \$$ |
+  \______/ \________| \______/  \______/ \______| \______/ \__|  \__|
+
+$$\      $$\  $$$$$$\  $$\   $$\  $$$$$$\   $$$$$$\  $$$$$$$$\ $$$$$$$\  
+$$$\    $$$ |$$  __$$\ $$$\  $$ |$$  __$$\ $$  __$$\ $$  _____|$$  __$$\ 
+$$$$\  $$$$ |$$ /  $$ |$$$$\ $$ |$$ /  $$ |$$ /  \__|$$ |      $$ |  $$ |
+$$\$$\$$ $$ |$$$$$$$$ |$$ $$\$$ |$$$$$$$$ |$$ |$$$$\ $$$$$\    $$$$$$$  |
+$$ \$$$  $$ |$$  __$$ |$$ \$$$$ |$$  __$$ |$$ |\_$$ |$$  __|   $$  __$$< 
+$$ |\$  /$$ |$$ |  $$ |$$ |\$$$ |$$ |  $$ |$$ |  $$ |$$ |      $$ |  $$ |
+$$ | \_/ $$ |$$ |  $$ |$$ | \$$ |$$ |  $$ |\$$$$$$  |$$$$$$$$\ $$ |  $$ |
+\__|     \__|\__|  \__|\__|  \__|\__|  \__| \______/ \________|\__|  \__|       
+'''
+
 class MeetController:
     def __init__(self):
         self.opt = self._setup_chrome_options()
@@ -155,13 +176,11 @@ class MeetController:
         print("Meeting started.")
         
         try:
-            time.sleep(10)  # Wait for meeting to fully load
+            time.sleep(10)
             
-            # Initialize and start transcription scraping
             self.transcription_scraper = TranscriptionScraper(self.driver)
             self.transcription_scraper.start_transcription()
             
-            # Continuous monitoring loop
             while True:
                 current_time = datetime.now(pytz.utc)
                 wait_time = (exit_time_utc - current_time).total_seconds()
@@ -174,10 +193,8 @@ class MeetController:
                 if int(wait_time) % 60 == 0:
                     print(f"Time remaining in meeting: {int(wait_time/60)} minutes")
                 
-                # Brief sleep to prevent CPU overuse
                 time.sleep(1)
                 
-                # Check if transcription is still running
                 if not self.transcription_scraper.is_running:
                     print("Transcription stopped unexpectedly. Attempting to restart...")
                     self.transcription_scraper.start_transcription()
@@ -194,7 +211,5 @@ class MeetController:
         return
 
 def get_meet_controller():
-    '''
-    Returns an instance of MeetController : All the functions of MeetController can be accessed using this instance
-    '''
+    '''Returns an instance of MeetController'''
     return MeetController()
