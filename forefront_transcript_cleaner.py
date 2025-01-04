@@ -1,46 +1,75 @@
 import os
 import requests
+import time
+from dotenv import load_dotenv
 
-'''
-$$$$$$$$\ $$$$$$$\   $$$$$$\  $$\   $$\  $$$$$$\   $$$$$$\  $$$$$$$\  $$$$$$\ $$$$$$$\ $$$$$$$$\ 
-\__$$  __|$$  __$$\ $$  __$$\ $$$\  $$ |$$  __$$\ $$  __$$\ $$  __$$\ \_$$  _|$$  __$$\\__$$  __|
-   $$ |   $$ |  $$ |$$ /  $$ |$$$$\ $$ |$$ /  \__|$$ /  \__|$$ |  $$ |  $$ |  $$ |  $$ |  $$ |   
-   $$ |   $$$$$$$  |$$$$$$$$ |$$ $$\$$ |\$$$$$$\  $$ |      $$$$$$$  |  $$ |  $$$$$$$  |  $$ |   
-   $$ |   $$  __$$< $$  __$$ |$$ \$$$$ | \____$$\ $$ |      $$  __$$<   $$ |  $$  ____/   $$ |   
-   $$ |   $$ |  $$ |$$ |  $$ |$$ |\$$$ |$$\   $$ |$$ |  $$\ $$ |  $$ |  $$ |  $$ |        $$ |   
-   $$ |   $$ |  $$ |$$ |  $$ |$$ | \$$ |\$$$$$$  |\$$$$$$  |$$ |  $$ |$$$$$$\ $$ |        $$ |   
-   \__|   \__|  \__|\__|  \__|\__|  \__| \______/  \______/ \__|  \__|\______|\__|        \__|   
-            $$$$$$\  $$\       $$$$$$$$\  $$$$$$\  $$\   $$\ $$$$$$$$\ $$$$$$$\  
-            $$  __$$\ $$ |      $$  _____|$$  __$$\ $$$\  $$ |$$  _____|$$  __$$\ 
-            $$ /  \__|$$ |      $$ |      $$ /  $$ |$$$$\ $$ |$$ |      $$ |  $$ |
-            $$ |      $$ |      $$$$$\    $$$$$$$$ |$$ $$\$$ |$$$$$\    $$$$$$$  |
-            $$ |      $$ |      $$  __|   $$  __$$ |$$ \$$$$ |$$  __|   $$  __$$< 
-            $$ |  $$\ $$ |      $$ |      $$ |  $$ |$$ |\$$$ |$$ |      $$ |  $$ |
-            \$$$$$$  |$$$$$$$$\ $$$$$$$$\ $$ |  $$ |$$ | \$$ |$$$$$$$$\ $$ |  $$ |
-            \______/ \________|\________|\__|  \__|\__|  \__|\________|\__|  \__|
-'''
 
 class TranscriptCleaner:
     def __init__(self):
+        load_dotenv()
         self.api_key = os.getenv("FOREFRONT_API_KEY")
-        
-        if not self.api_key:
-            raise ValueError("Forefront API key not found in environment variables")
-        
         self.url = "https://api.forefront.ai/v1/chat/completions"
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
+        self.max_retries = 3
         
-        self.system_prompt = '''
-            You are a transcript cleaning assistant. Clean the following transcript by:
-            1 Removing repetitive phrases and stutters
-            2 Preserving key information and timestamps
-            3 Formatting the output for clarity
-            4 Retaining technical terms and instructions         
-            Format the output with timestamps at the start of each paragraph
+        self.system_prompt = f'''You are a transcript cleaning assistant. Your task is to:
+            1. Remove repetitive phrases and stutters
+            2. Combine related segments into coherent paragraphs
+            3. Maintain the original meaning and key information
+            4. Keep important timestamps at the start of each major segment
+            5. Format the output in clear, readable paragraphs
+            6. Maintain technical terms and specific instructions mentioned
+            7. Change certain things like file dot thing to file.thing
         '''
+
+    def make_api_request(self, transcript_text):
+        """Make API request with retry logic"""
+        payload = {
+            "model": "mistralai/Mistral-7B-v0.1",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": self.system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": transcript_text
+                }
+            ],
+            "max_tokens": 200,
+            "temperature": 0.1,
+        }
+
+        for attempt in range(self.max_retries):
+            try:
+                response = requests.post(
+                    self.url,
+                    json=payload,
+                    headers=self.headers,
+                    timeout=300
+                )
+                print(f"[STATUS]: {response.status_code}")
+
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result['choices'][0]['message']['content']
+                    return content.replace('<|im_end|>', '').replace('<|im_start|>', '').strip()
+                else:
+                    print(f"[RESPONSE]: {response.text}")
+                    if attempt < self.max_retries - 1:
+                        time.sleep(2 ** attempt)
+                        continue
+                    raise Exception(f"API request failed after {self.max_retries} attempts")
+
+            except Exception as e:
+                print(f"[ERROR]: {str(e)}")
+                if attempt < self.max_retries - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
 
     def clean_and_save_transcript(self, transcript_path):
         """Clean the transcript using Forefront AI and save it to a new file"""
@@ -49,38 +78,8 @@ class TranscriptCleaner:
             with open(transcript_path, 'r', encoding='utf-8') as file:
                 transcript_text = file.read()
 
-            # Prepare the API payload
-            payload = {
-                "model": "mistralai/Mistral-7B-v0.1",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": self.system_prompt
-                    },
-                    {
-                        "role": "user",
-                        "content": transcript_text
-                    }
-                ],
-                "max_tokens": 1000,
-                "temperature": 0.2
-            }
-
-            # Make API request
-            response = requests.post(
-                self.url, 
-                json=payload, 
-                headers=self.headers, 
-                timeout=120
-            )
-            
-            print(f"[STATUS]: {response.status_code}")
-            
-            if response.status_code != 200:
-                raise Exception(f"API request failed: {response.text}")
-
-            # Extract cleaned text from response
-            cleaned_text = response.json()['choices'][0]['message']['content']
+            # Get cleaned text from API
+            cleaned_text = self.make_api_request(transcript_text)
 
             # Create cleaned transcripts directory
             directory = os.path.dirname(transcript_path)
@@ -98,9 +97,6 @@ class TranscriptCleaner:
             print(f"Successfully cleaned transcript and saved to: {new_path}")
             return new_path
 
-        except requests.exceptions.Timeout:
-            print("[ERROR]: Request timed out. Try reducing the transcript length.")
-            raise
         except Exception as e:
             print(f"Error cleaning transcript: {str(e)}")
             raise

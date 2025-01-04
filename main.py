@@ -3,8 +3,12 @@ from dotenv import load_dotenv
 import os
 from session_manager import get_meet_controller
 
-'''USE EITHER OF TRASNSCRIPT CLEANER MODULES'''
-from openai_transcript_cleaner import TranscriptCleaner
+'''
+USE EITHER OF TRASNSCRIPT CLEANER MODULES
+WE ARE CURRENTLY USING GEMINI TRANSCRIPT CLEANER BECAUSE IT IS FREE TO USE
+'''
+from gemini_transcript_cleaner import TranscriptCleaner
+# from openai_transcript_cleaner import TranscriptCleaner
 # from forefront_transcript_cleaner import TranscriptCleaner
 
 # Function to get time input from user
@@ -52,21 +56,23 @@ def main():
         meet_controller.join_meet(meeting_link, join_time_ist, exit_time_ist)
 
         print("Meeting ended. Processing transcript...")
-
-        try:
-            transcript_cleaner = TranscriptCleaner()
+    except Exception as e:
+        print(f"Error during meeting: {str(e)}")
+        raise
+    try:
+        transcript_cleaner = TranscriptCleaner()
             
-            latest_transcript = transcript_cleaner.get_latest_transcript()
+        latest_transcript = transcript_cleaner.get_latest_transcript()
             
-            cleaned_transcript_path = transcript_cleaner.clean_and_save_transcript(latest_transcript)
-            print("Transcript processing completed successfully")
+        cleaned_transcript_path = transcript_cleaner.clean_and_save_transcript(latest_transcript)
+        print("Transcript processing completed successfully")
             
-        except Exception as e:
-            print(f"Failed to process transcript: {str(e)}")
-            raise
+    except Exception as e:
+        print(f"Failed to process transcript: {str(e)}")
+        raise
 
     except Exception as e:
-        print(f"Error during meeting or transcript processing: {str(e)}")
+        print(f"Error during meeting: {str(e)}")
         raise
     finally:
         print("Script execution completed")

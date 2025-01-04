@@ -1,40 +1,25 @@
 import os
 import openai
-
-'''
-$$$$$$$$\ $$$$$$$\   $$$$$$\  $$\   $$\  $$$$$$\   $$$$$$\  $$$$$$$\  $$$$$$\ $$$$$$$\ $$$$$$$$\ 
-\__$$  __|$$  __$$\ $$  __$$\ $$$\  $$ |$$  __$$\ $$  __$$\ $$  __$$\ \_$$  _|$$  __$$\\__$$  __|
-   $$ |   $$ |  $$ |$$ /  $$ |$$$$\ $$ |$$ /  \__|$$ /  \__|$$ |  $$ |  $$ |  $$ |  $$ |  $$ |   
-   $$ |   $$$$$$$  |$$$$$$$$ |$$ $$\$$ |\$$$$$$\  $$ |      $$$$$$$  |  $$ |  $$$$$$$  |  $$ |   
-   $$ |   $$  __$$< $$  __$$ |$$ \$$$$ | \____$$\ $$ |      $$  __$$<   $$ |  $$  ____/   $$ |   
-   $$ |   $$ |  $$ |$$ |  $$ |$$ |\$$$ |$$\   $$ |$$ |  $$\ $$ |  $$ |  $$ |  $$ |        $$ |   
-   $$ |   $$ |  $$ |$$ |  $$ |$$ | \$$ |\$$$$$$  |\$$$$$$  |$$ |  $$ |$$$$$$\ $$ |        $$ |   
-   \__|   \__|  \__|\__|  \__|\__|  \__| \______/  \______/ \__|  \__|\______|\__|        \__|   
-            $$$$$$\  $$\       $$$$$$$$\  $$$$$$\  $$\   $$\ $$$$$$$$\ $$$$$$$\  
-            $$  __$$\ $$ |      $$  _____|$$  __$$\ $$$\  $$ |$$  _____|$$  __$$\ 
-            $$ /  \__|$$ |      $$ |      $$ /  $$ |$$$$\ $$ |$$ |      $$ |  $$ |
-            $$ |      $$ |      $$$$$\    $$$$$$$$ |$$ $$\$$ |$$$$$\    $$$$$$$  |
-            $$ |      $$ |      $$  __|   $$  __$$ |$$ \$$$$ |$$  __|   $$  __$$< 
-            $$ |  $$\ $$ |      $$ |      $$ |  $$ |$$ |\$$$ |$$ |      $$ |  $$ |
-            \$$$$$$  |$$$$$$$$\ $$$$$$$$\ $$ |  $$ |$$ | \$$ |$$$$$$$$\ $$ |  $$ |
-            \______/ \________|\________|\__|  \__|\__|  \__|\________|\__|  \__|
-'''
+from dotenv import load_dotenv
 
 class TranscriptCleaner:
     def __init__(self):
+        load_dotenv()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         if not self.openai_api_key:
             raise ValueError("OpenAI API key not found in environment variables")
         openai.api_key = self.openai_api_key
         
-        self.prompt = """
-        You are a transcript cleaning assistant. Your task is to:
-        Remove repetitive phrases and stutters.
-        Combine related segments into coherent paragraphs.
-        Preserve key information and timestamps.
-        Format the output for clarity.
-        Retain technical terms and instructions.
-        """
+        self.prompt = f'''
+            You are a transcript cleaning assistant. Your task is to:
+            1. Remove repetitive phrases and stutters
+            2. Combine related segments into coherent paragraphs
+            3. Maintain the original meaning and key information
+            4. Keep important timestamps at the start of each major segment
+            5. Format the output in clear, readable paragraphs
+            6. Maintain technical terms and specific instructions mentioned
+            7. Change certain things like file dot thing to file.thing
+        '''
 
     def clean_and_save_transcript(self, transcript_path):
         """Clean the transcript and save it to a new file"""
@@ -47,8 +32,8 @@ class TranscriptCleaner:
             response = openai.Completion.create(
                 engine="davinci-002",
                 prompt=self.prompt + "\n\n" + transcript_text,
-                max_tokens=2000,
-                temperature=0.5,
+                max_tokens=200,
+                temperature=0.1,
             )
             cleaned_text = response.choices[0].text.strip()
 
