@@ -95,7 +95,7 @@ class TranscriptCleaner:
     def get_latest_transcript():
         """Find the most recent transcript file"""
         transcript_dir = Path.cwd() / "transcripts"
-        transcript_files = list(transcript_dir.glob("meet_transcript_*"))
+        transcript_files = list(transcript_dir.glob("transcript_*"))
         
         if not transcript_files:
             raise Exception("No transcript files found")
