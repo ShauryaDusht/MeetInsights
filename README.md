@@ -5,7 +5,10 @@
 [![Google AI](https://img.shields.io/badge/Google-Gemini-red.svg)](https://deepmind.google/technologies/gemini/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-🤖 AI-powered assistant that automatically joins Google Meet sessions, captures conversations, and generates transcripts.
+> AI-powered assistant that automatically joins Google Meet sessions, captures conversations, and generates transcripts.
+
+## Preview
+You can view or download the file from the link: [Video](https://drive.google.com/file/d/1cl9cI9NNgQVV8PvfDczfiuYJt_q8_LSf/view?usp=sharing)
 
 ## ✨ Features
 
